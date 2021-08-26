@@ -130,7 +130,6 @@ dmypy.json
 
 # Own files and directories
 data/*
-messynotebooks/*.ipynb
 figures/*
 *.sh
 .DS_Store
