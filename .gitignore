@@ -127,3 +127,11 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Own files and directories
+data/*
+messynotebooks/*.ipynb
+figures/*
+*.sh
+.DS_Store
+draftfigs/Levermann_methods.jpg
