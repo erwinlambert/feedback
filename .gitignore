@@ -130,7 +130,6 @@ dmypy.json
 
 # Own files and directories
 data/*
-figures/*
 *.sh
 .DS_Store
 draftfigs/Levermann_methods.jpg
