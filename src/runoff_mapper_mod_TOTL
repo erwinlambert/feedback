@@ -1,0 +1,28 @@
+        ! Overwrite Antartctic fixed fluxes
+        MWTOT = 104800000.0_RNP
+
+        ! Perturbation 400 Gt/yr
+        MWPER = 12703030.0_RNP 
+
+        ! 66 Wedd 67 Ross 68 EAIS 69 Amun 70 Pens
+
+        ! Runoff distribution
+        BasinRunoff(66)  = 0.07  * MWTOT + 0.38 * MWPER
+        BasinRunoff(67)  = 0.03  * MWTOT + 0.32 * MWPER
+        BasinRunoff(68)  = 0.155 * MWTOT + 0.50 * MWPER
+        BasinRunoff(69)  = 0.23  * MWTOT + 0.71 * MWPER
+        BasinRunoff(70)  = 0.065 * MWTOT + 0.73 * MWPER
+
+        ! Calving source regions
+        C66 = 0.12  * MWTOT + 0.62 * MWPER
+        C67 = 0.06  * MWTOT + 0.68 * MWPER
+        C68 = 0.155 * MWTOT + 0.50 * MWPER
+        C69 = 0.09  * MWTOT + 0.29 * MWPER
+        C70 = 0.025 * MWTOT + 0.27 * MWPER
+
+        ! Calving sink distribution
+        BasinCalving(66) = C66 + 0.5*C67 + 0.6*C68 + 0.2*C69
+        BasinCalving(67) = 0.3*C67 + 0.3*C69
+        BasinCalving(68) = 0.2*C67 + 0.4*C68 + 0.2*C69
+        BasinCalving(69) = 0.3*C69
+        BasinCalving(70) = C70
