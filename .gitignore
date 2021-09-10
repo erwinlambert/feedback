@@ -129,7 +129,8 @@ dmypy.json
 .pyre/
 
 # Own files and directories
-data/*
+data/ecefiles/
+data/Rignot/
 *.sh
 .DS_Store
 draftfigs/Levermann_methods.jpg
