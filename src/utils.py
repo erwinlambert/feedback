@@ -1,0 +1,98 @@
+import numpy as np
+import matplotlib as mpl
+
+mpl.rcParams['lines.linewidth'] = 2.
+mpl.rcParams['font.family'] = 'serif'
+mpl.rcParams['axes.titlesize'] = 9
+mpl.rcParams['axes.labelsize'] = 9
+mpl.rcParams['legend.fontsize'] = 9
+mpl.rcParams['figure.subplot.wspace'] = .25
+mpl.rcParams['figure.subplot.left'] = .1
+mpl.rcParams['figure.subplot.right'] = .95
+mpl.rcParams['figure.figsize'] = (7,5)
+
+bcol = {}
+bcol['EAIS'] = 'tab:blue'
+bcol['ROSS'] = 'tab:orange'
+bcol['AMUN'] = 'tab:red'
+bcol['WEDD'] = 'tab:purple'
+bcol['PENS'] = 'tab:green'
+
+btitle = {}
+btitle['EAIS'] = 'a) East Antarctic'
+btitle['ROSS'] = 'b) Ross'
+btitle['AMUN'] = 'd) Amundsen'
+btitle['WEDD'] = 'e) Weddell'
+btitle['PENS'] = 'f) Peninsula'
+
+scol = {}
+scol['119'] = (0/255,173/255,207/255)
+scol['126'] = (23/255,60/255,102/255)
+scol['245'] = (247/255,148/255,32/255)
+scol['370'] = (231/255,29/255,37/255)
+scol['585'] = (149/255,27/255,30/255)
+
+def oce2ice(TMP,IRF,bm=11.5):
+    #Input:
+    #TMP: 5 temperature time series
+    #IRF: Ice response function
+    #bm: basal melt sensitivity [m/yr /degC]
+    #Output:
+    #IML: Ice mass loss for 5 regions [Gt/yr]
+    assert TMP.shape == IRF.shape
+    IML = 0.*TMP
+    for t,tt in enumerate(IRF.rftime):
+        if t==0: continue
+        for b,bas in enumerate(IRF.basin):
+            dFdt = TMP[1:t,b]-TMP[:t-1,b]
+            CRF = IRF[1:t,b].values
+            IML[t,b] = bm*np.sum(CRF[::-1]*dFdt)
+    return IML
+
+def oce2slr(TMP,SRF,bm=11.5):
+    #Input:
+    #TMP: 5 temperature time series
+    #SRF: Sealevel response function
+    #bm: basal melt sensitivity [m/yr /degC]
+    #Output:
+    #SLR: Cumulative sea level rise for 5 regions [m]
+    assert TMP.shape == SRF.shape
+    SLR = 0.*TMP
+    for t,tt in enumerate(SRF.rftime):
+        if t==0: continue
+        for b,bas in enumerate(SRF.basin):
+            dFdt = TMP[1:t,b]-TMP[:t-1,b]
+            CRF = SRF[1:t,b].values
+            SLR[t,b] = bm*np.sum(CRF[::-1]*dFdt)
+    return np.cumsum(SLR,axis=0)
+
+def ice2oce(IML,ORF):
+    #Input:
+    #IML: 5 ice mass loss time series
+    #ORF: Ocean response function
+    #Output:
+    #TMP: Temperature anomaly for 5 regions [degC]
+    assert IML.shape == ORF.shape[:2]
+    assert ORF.shape[1] == ORF.shape[2]
+    TMP = 0.*IML
+    for t,tt in enumerate(ORF.rftime):
+        if t==0: continue
+        for e,ex in enumerate(ORF.exp):
+            dFdt = IML[1:t,e]-IML[:t-1,e]
+            for b,bas in enumerate(ORF.basin):
+                CRF = ORF[1:t,e,b].values
+                TMP[t,b] += np.sum(CRF[::-1]*dFdt)
+    return TMP
+
+def iterate(ds,ism,esm,ssp,niter=4):
+    TMP = np.zeros((niter,len(ds.time),len(ds.basin)))
+    IML = np.zeros((niter,len(ds.time),len(ds.basin)))
+    SLR = np.zeros((niter,len(ds.time),len(ds.basin)))
+    TMP[0,:,:] = ds.temp.sel(esm=esm,ssp=ssp).values
+    IML[0,:,:] = oce2ice(TMP[0,:,:],ds.irf.sel(ism=ism))
+    SLR[0,:,:] = oce2slr(TMP[0,:,:],ds.srf.sel(ism=ism))
+    for n in range(1,niter):
+        TMP[n,:,:] = ds.temp.sel(esm=esm,ssp=ssp).values + ice2oce(IML[n-1,:,:],ds.orf)
+        IML[n,:,:] = oce2ice(TMP[n,:,:],ds.irf.sel(ism=ism))
+        SLR[n,:,:] = oce2slr(TMP[n,:,:],ds.srf.sel(ism=ism))
+    return TMP,IML,SLR

@@ -131,6 +131,7 @@ dmypy.json
 # Own files and directories
 data/ecefiles/
 data/Rignot/
+data/basinmask.nc
 *.sh
 .DS_Store
 draftfigs/Levermann_methods.jpg
