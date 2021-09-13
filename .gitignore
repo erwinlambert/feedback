@@ -132,6 +132,7 @@ dmypy.json
 data/ecefiles/
 data/Rignot/
 data/basinmask.nc
+data/Larmip/
 *.sh
 .DS_Store
 draftfigs/Levermann_methods.jpg
