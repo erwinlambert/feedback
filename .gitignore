@@ -133,6 +133,7 @@ data/ecefiles/
 data/Rignot/
 data/basinmask.nc
 data/Larmip/
+data/eveline/
 *.sh
 .DS_Store
 draftfigs/Levermann_methods.jpg
