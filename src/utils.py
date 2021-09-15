@@ -36,7 +36,7 @@ scol['585'] = (149/255,27/255,30/255)
 spy = 3600*24*365.25 #Seconds per year
 
 gamma = {} #Gamma value [m/s] from Favier et al 2019
-gamma['lin'] = 2e-5
+gamma['lin'] = 1e-5
 gamma['quad'] = 36e-5
 bmpexp = {} #Exponent in basal melt equation
 bmpexp['lin'] = 1
@@ -100,7 +100,8 @@ def ice2oce(IML,ORF):
                 TMP[t,b] += np.sum(CRF[::-1]*dFdt)
     return TMP
 
-def iterate(ds,ism,esm,ssp,bmp='lin',niter=4):
+def iterate(ds,ism,esm,ssp,bmp='lin',niter=1):
+    niter += 1
     TMP = np.zeros((niter,len(ds.time),len(ds.basin)))
     IML = np.zeros((niter,len(ds.time),len(ds.basin)))
     SLR = np.zeros((niter,len(ds.time),len(ds.basin)))
