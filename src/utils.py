@@ -11,6 +11,9 @@ mpl.rcParams['figure.subplot.left'] = .1
 mpl.rcParams['figure.subplot.right'] = .95
 mpl.rcParams['figure.figsize'] = (7,5)
 
+basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula']
+exp = ['EAIS','ROSS','AMUN','WEDD','PENS','TOTL','HALF','DOUB']
+
 bcol = {}
 bcol['East Ant.'] = 'tab:blue'
 bcol['Ross']      = 'tab:orange'
