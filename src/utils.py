@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib as mpl
 
-mpl.rcParams['lines.linewidth'] = 2.
+mpl.rcParams['lines.linewidth'] = 1.
 mpl.rcParams['font.family'] = 'serif'
 mpl.rcParams['axes.titlesize'] = 9
 mpl.rcParams['axes.labelsize'] = 9
@@ -36,7 +36,7 @@ scol['585'] = (149/255,27/255,30/255)
 spy = 3600*24*365.25 #Seconds per year
 
 gamma = {} #Gamma value [m/s] from Favier et al 2019
-gamma['lin'] = 1e-5
+gamma['lin'] = 2e-5
 gamma['quad'] = 36e-5
 bmpexp = {} #Exponent in basal melt equation
 bmpexp['lin'] = 1
@@ -45,7 +45,7 @@ bmpexp['quad'] = 2
 K = 1028*3947/(917*3.34e5)
 
 def basalmelt(T,bmp='lin',Tf=-1.7):
-    return gamma[bmp]*spy*(K*(T-Tf))**bmpexp[bmp]
+    return gamma[bmp]*spy*K**bmpexp[bmp]*(T-Tf)*np.abs(T-Tf)**(bmpexp[bmp]-1)
 
 
 def oce2ice(TMP,IRF,bmp='lin'):
