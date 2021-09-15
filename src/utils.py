@@ -12,18 +12,11 @@ mpl.rcParams['figure.subplot.right'] = .95
 mpl.rcParams['figure.figsize'] = (7,5)
 
 bcol = {}
-bcol['EAIS'] = 'tab:blue'
-bcol['ROSS'] = 'tab:orange'
-bcol['AMUN'] = 'tab:red'
-bcol['WEDD'] = 'tab:purple'
-bcol['PENS'] = 'tab:green'
-
-btitle = {}
-btitle['EAIS'] = 'a) East Antarctic'
-btitle['ROSS'] = 'b) Ross'
-btitle['AMUN'] = 'd) Amundsen'
-btitle['WEDD'] = 'e) Weddell'
-btitle['PENS'] = 'f) Peninsula'
+bcol['East Ant.'] = 'tab:blue'
+bcol['Ross']      = 'tab:orange'
+bcol['Amundsen']  = 'tab:red'
+bcol['Weddell']   = 'tab:purple'
+bcol['Peninsula'] = 'tab:green'
 
 scol = {}
 scol['119'] = (0/255,173/255,207/255)
@@ -35,6 +28,7 @@ scol['585'] = (149/255,27/255,30/255)
 
 spy = 3600*24*365.25 #Seconds per year
 
+bmps = ['lin','quad']
 gamma = {} #Gamma value [m/s] from Favier et al 2019
 gamma['lin'] = 2e-5
 gamma['quad'] = 36e-5
