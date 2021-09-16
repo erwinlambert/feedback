@@ -13,6 +13,7 @@ mpl.rcParams['figure.figsize'] = (7,5)
 
 basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula']
 exp = ['EAIS','ROSS','AMUN','WEDD','PENS','TOTL','HALF','DOUB']
+ssp = ['126','245','585']
 
 bcol = {}
 bcol['East Ant.'] = 'tab:blue'
