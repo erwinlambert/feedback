@@ -12,7 +12,7 @@ mpl.rcParams['figure.subplot.right'] = .95
 mpl.rcParams['figure.figsize'] = (7,5)
 
 basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula']
-exp = ['EAIS','ROSS','AMUN','WEDD','PENS','TOTL','HALF','DOUB']
+exp = ['eais','ross','amun','wedd','pens','totl','half','doub']
 ssp = ['126','245','585']
 
 bcol = {}
