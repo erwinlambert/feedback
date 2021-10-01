@@ -2,7 +2,7 @@
         MWTOT = 104800000.0_RNP
 
         ! Perturbation 200 Gt/yr
-        MWPER = 1635151.0_RNP 
+        MWPER = 6351515.0_RNP 
 
         ! 66 Wedd 67 Ross 68 EAIS 69 Amun 70 Pens
 
