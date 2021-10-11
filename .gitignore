@@ -132,6 +132,7 @@ dmypy.json
 data/ecefiles/
 data/Rignot/
 data/basinmask.nc
+data/basinvolumes.nc
 data/Larmip/
 data/eveline/
 .DS_Store
