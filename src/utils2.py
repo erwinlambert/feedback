@@ -20,16 +20,13 @@ def save_basinvolumes():
     thick = ds['e3t'].isel(time_counter=0).values #Quasi-time-independent, treated as fixed
     ds.close()
     secs = (time_bnds[:12,1]-time_bnds[:12,0]).values / np.timedelta64(1, 's')
-    
-    #To check relative volume:
-    basins = np.append(ut.basin,['Pens1','Pens2'])
 
     #Get mask for basin averages
     lons = np.repeat(lon[np.newaxis,:,:],len(levmid),axis=0)
     lats = np.repeat(lat[np.newaxis,:,:],len(levmid),axis=0)
-    volume = np.repeat(lats[np.newaxis,:,:,:],len(basins),axis=0)
+    volume = np.repeat(lats[np.newaxis,:,:,:],len(ut.basin),axis=0)
 
-    for b,bas in enumerate(basins):
+    for b,bas in enumerate(ut.basin):
         mm = np.zeros(lons.shape)
         if bas=='East Ant.':
             #EAIS
@@ -52,11 +49,11 @@ def save_basinvolumes():
             mm[(lons>-66) & (lons<-56) & (lats>-70) & (lats<-65)] = 1
             mm[(lons>-80) & (lons<-65) & (lats>-75) & (lats<-70)] = 1
             depp = 420
-        if bas=='Pens1':
+        if bas=='Pens. East':
             #Eastern peninsula
             mm[(lons>-66) & (lons<-56) & (lats>-70) & (lats<-65)] = 1
             depp = 420
-        if bas=='Pens2':
+        if bas=='Pens. West':
             #Western peninsula
             mm[(lons>-80) & (lons<-65) & (lats>-75) & (lats<-70)] = 1
             depp = 420
@@ -79,7 +76,7 @@ def save_basinvolumes():
     
     volume2 = xr.DataArray(volume,dims=('basin','lev','y','x'),attrs={'unit':'m^3','long_name':'Gridded 3D volume per basin'})
     ds = xr.Dataset({'volume':volume2})
-    ds = ds.assign_coords({"basin":(['basin'],basins),"lev":(['lev'],levmid),"lat": (["y", "x"], lat),"lon": (["y", "x"], lon)})
+    ds = ds.assign_coords({"basin":(['basin'],ut.basin),"lev":(['lev'],levmid),"lat": (["y", "x"], lat),"lon": (["y", "x"], lon)})
     ds.to_netcdf('../data/basinvolumes.nc',mode='w')
     ds.close()
     print('Saved basin volumes')

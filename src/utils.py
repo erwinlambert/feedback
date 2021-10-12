@@ -11,7 +11,7 @@ mpl.rcParams['figure.subplot.left'] = .1
 mpl.rcParams['figure.subplot.right'] = .95
 mpl.rcParams['figure.figsize'] = (7,5)
 
-basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula']
+basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula','Pens. East','Pens. West']
 exp = ['eais','ross','amun','wedd','pens','totl','half','doub']
 ssp = ['126','245','585']
 
@@ -21,6 +21,8 @@ bcol['Ross']      = 'tab:orange'
 bcol['Amundsen']  = 'tab:red'
 bcol['Weddell']   = 'tab:purple'
 bcol['Peninsula'] = 'tab:green'
+bcol['Pens. East']= 'tab:green'
+bcol['Pens. West']= 'tab:green'
 
 scol = {}
 scol['119'] = (0/255,173/255,207/255)
