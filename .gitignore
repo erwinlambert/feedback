@@ -135,6 +135,7 @@ data/basinmask.nc
 data/basinvolumes.nc
 data/Larmip/
 data/eveline/
+videos/
 .DS_Store
 draftfigs/Levermann_methods.jpg
 copy_ece.sh
