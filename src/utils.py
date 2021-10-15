@@ -12,7 +12,7 @@ mpl.rcParams['figure.subplot.right'] = .95
 mpl.rcParams['figure.figsize'] = (7,5)
 
 basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula','Pens. East','Pens. West']
-exp = ['eais','ross','amun','wedd','pens','totl','half','doub']
+exp = ['eais','ross','amun','wedd','pens','tot2','hal2','doub']
 ssp = ['126','245','585']
 
 bcol = {}
@@ -82,25 +82,27 @@ def oce2slr(TMP,SRF,bmp='lin'):
             SLR[t,b] = np.sum(CRF[::-1]*dFdt)
     return np.cumsum(SLR,axis=0)
 
-def ice2oce(IML,ORF):
+def ice2oce(IML,tanom,pert):
     #Input:
-    #IML: 5 ice mass loss time series
-    #ORF: Ocean response function
+    #IML: 5 ice mass loss time series [Gt/yr]
+    #tanom: Basin temperature anomaly to perturbation [degC]
+    #pert: perturbation magnitude [Gt/yr]
     #Output:
     #TMP: Temperature anomaly for 5 regions [degC]
-    assert IML.shape == ORF.shape[:2]
-    assert ORF.shape[1] == ORF.shape[2]
+    assert IML.shape == tanom.shape[:2]
+    assert tanom.shape[1] == tanom.shape[2]
     TMP = 0.*IML
-    for t,tt in enumerate(ORF.rftime):
+    for t,tt in enumerate(tanom.rftime):
         if t==0: continue
-        for e,ex in enumerate(ORF.exp):
+        for e,ex in enumerate(tanom.exp):
             dFdt = IML[1:t,e]-IML[:t-1,e]
-            for b,bas in enumerate(ORF.basin):
-                CRF = ORF[1:t,e,b].values
+            for b,bas in enumerate(tanom.basin):
+                CRF = tanom[1:t,e,b].values/pert
                 TMP[t,b] += np.sum(CRF[::-1]*dFdt)
     return TMP
 
-def iterate(ds,ism,esm,ssp,bmp='lin',niter=1):
+def iterate(ds,ism,esm,ssp,bmp='lin',niter=1,pert=400):
+    ds = ds.isel(basin=slice(0,5),exp=slice(0,5))
     niter += 1
     TMP = np.zeros((niter,len(ds.time),len(ds.basin)))
     IML = np.zeros((niter,len(ds.time),len(ds.basin)))
@@ -109,7 +111,7 @@ def iterate(ds,ism,esm,ssp,bmp='lin',niter=1):
     IML[0,:,:] = oce2ice(TMP[0,:,:],ds.irf.sel(ism=ism),bmp=bmp)
     SLR[0,:,:] = oce2slr(TMP[0,:,:],ds.srf.sel(ism=ism),bmp=bmp)
     for n in range(1,niter):
-        TMP[n,:,:] = ds.temp.sel(esm=esm,ssp=ssp).values + ice2oce(IML[n-1,:,:],ds.orf)
+        TMP[n,:,:] = ds.temp.sel(esm=esm,ssp=ssp).values + ice2oce(IML[n-1,:,:],ds.tanom,pert)
         IML[n,:,:] = oce2ice(TMP[n,:,:],ds.irf.sel(ism=ism),bmp=bmp)
         SLR[n,:,:] = oce2slr(TMP[n,:,:],ds.srf.sel(ism=ism),bmp=bmp)
     return TMP,IML,SLR
