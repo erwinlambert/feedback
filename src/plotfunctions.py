@@ -1,3 +1,4 @@
+import numpy as np
 import matplotlib as mpl
 
 mpl.rcParams['lines.linewidth'] = 1.
@@ -25,17 +26,3 @@ scol['126'] = (23/255,60/255,102/255)
 scol['245'] = (247/255,148/255,32/255)
 scol['370'] = (231/255,29/255,37/255)
 scol['585'] = (149/255,27/255,30/255)
-
-rcol = {}
-rcol['ctrl'] = '.5'
-rcol['quar'] = scol['119']
-rcol['half'] = scol['126']
-rcol['hal2'] = scol['126']
-rcol['totl'] = scol['245']
-rcol['tot2'] = scol['245']
-rcol['doub'] = scol['585']
-rcol['eais'] = bcol['East Ant.']
-rcol['ross'] = bcol['Ross']
-rcol['amun'] = bcol['Amundsen']
-rcol['wedd'] = bcol['Weddell']
-rcol['pens'] = bcol['Peninsula']
