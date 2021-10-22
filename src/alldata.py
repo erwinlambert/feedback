@@ -54,12 +54,12 @@ class AllData(Constants):
         temp2 = xr.DataArray(self.temp,dims=('time','esm','ssp','basin'),coords={'time':self.time,'esm':self.esm,'ssp':self.ssp,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'temperature anomaly from pre-industrial control'})
         tanom2  = xr.DataArray(self.tanom,dims=('rftime','exp','basin'),coords={'rftime':self.rftime,'exp':self.exp,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'ocean response function to increased mass loss'})
 
-        ds = xr.Dataset({'irf':irf2,'srf':srf2,'temp':temp2,'tanom':tanom2})
+        self.ds = xr.Dataset({'irf':irf2,'srf':srf2,'temp':temp2,'tanom':tanom2})
         
         if self.verbose:
             print('-----------------------------------------------')
-        print(f'Combined all data from {self.year0} to {self.year1} with option {self.option}')
-        return ds
+        print(f'Gathered all data from {self.year0} to {self.year1} with option {self.option}')
+        return
     
     def get_external(self):
         #Get external data
@@ -76,8 +76,8 @@ class AllData(Constants):
     
     def update_runs(self,option='ann'):
         for ee in self.exp:
-            rd = RunData(ee)
-            rd.checkfornewdata(option=option,verbose=self.verbose)
+            rd = RunData(ee,verbose=self.verbose)
+            rd.checkfornewdata(option=option)
         return
     
     def get_irf(self):

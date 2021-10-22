@@ -5,10 +5,15 @@ import glob
 from constants import Constants
 
 class RunData(Constants):
-    """ Data and attributes for a single run 
+    """ 
+    Contains metadata of output from a single run
+    
+    Allows for analysis of new available raw data
+    
+    Allows for writing out basin temperature time series (annual and monthly)
     
     """
-    def __init__(self,run):
+    def __init__(self,run,verbose=True):
         #Read input
         self.run = run
 
@@ -19,35 +24,38 @@ class RunData(Constants):
         self.savename_mon = f'../data/temperature_mon_{self.run}.nc'
         self.savename_ann = f'../data/temperature_ann_{self.run}.nc'
         
+        #Determine whether to print a lot of updates
+        self.verbose=verbose
+        
         return
     
-    def checkfornewdata(self,verbose=True,option='all'):
+    def checkfornewdata(self,option='all'):
+        #Check for new annual and/or monthly data from runs from which no basin temperatures are saved yet
         assert option in ['all','ann','mon']
-        if verbose:
-            print(f'Checking for {option} data from {self.run}')
+        if self.verbose: print(f'Checking for {option} data from {self.run}')
+        #Get file names of raw data
         self.get_fnames()
+        
         if option in ['all','ann']:
+            #Update annual basin temperatures
             self.get_nyears()
-            if self.nyears_saved<self.nyears:
-                if verbose:
-                    print(f'Updating annual time series with {self.nyears-self.nyears_saved} years ...')
+            if self.nyears_saved<self.nyears: #Check whether any new data is available
+                if self.verbose: print(f'Updating annual time series with {self.nyears-self.nyears_saved} years ...')
                 self.update_annual()
-            if verbose:
-                print('Annual data complete')
+            if self.verbose: print('Annual data complete')
         
         if option in ['all','mon']:
+            #Update monthly basin temperatures
             self.get_nmonths()    
-            if self.nmonths_saved<self.nmonths:
-                if verbose:
-                    print(f'Updating monthly time series with {self.nmonths-self.nmonths_saved} months ...')
+            if self.nmonths_saved<self.nmonths: #Check whether any new data is available
+                if self.verbose: print(f'Updating monthly time series with {self.nmonths-self.nmonths_saved} months ...')
                 self.update_monthly()
-            if verbose:
-                print('Monthly data complete')
-        if verbose:
-            print('---------------------')
+            if self.verbose: print('Monthly data complete')
+        if self.verbose: print('---------------------')
         return
     
     def get_nyears(self):
+        #Compute the number of available years
         self.nyears = 0
         for fname in self.fnames:
             ds = xr.open_dataset(fname)
@@ -59,10 +67,10 @@ class RunData(Constants):
             ds.close()
         except:
             self.nyears_saved = 0
-        #print('Annual data: saved',self.nyears_saved,'of',self.nyears,'years')
         return 
     
     def get_nmonths(self):
+        #Compute the number of available months
         self.nmonths = 0
         for fname in self.fnames:
             ds = xr.open_dataset(fname)
@@ -74,10 +82,10 @@ class RunData(Constants):
             ds.close()
         except:
             self.nmonths_saved = 0
-        #print('Monthly data: saved',self.nmonths_saved,'of',self.nmonths,'months')
         return
     
     def get_fnames(self):
+        #Get the filenames containing the raw data
         if self.run == 'ctrl':
             self.fnames = sorted(glob.glob(f'../data/ecefiles/n011/n011*T.nc'))[38:-5]
         elif self.run == 'spin':
@@ -87,12 +95,14 @@ class RunData(Constants):
         return 
 
     def update_monthly(self):
-    
+        #Update the monthly time series of basin temperatures
+        
+        #Read basin volumes for spatial averaging
         ds = xr.open_dataset('../data/basinvolumes.nc')
         volume = ds['volume']
         ds.close()
 
-        #Calculate basin-average annual time series
+        #Allocate variables
         tbas = np.zeros((self.nmonths,len(volume.basin)))
         ttime = np.arange(self.nmonths)
 
@@ -105,14 +115,16 @@ class RunData(Constants):
         except:
             pass
         
-        c = 0
+        #Get new mothly data
+        c = 0 #Month counter
         for f,fname in enumerate(self.fnames):
             ds = xr.open_dataset(fname)
             time = ds['time_centered'].values
             if c+len(time)<self.nmonths_saved:
+                #All data from this file is already saved
                 ds.close()
                 c+=len(time)
-                print(f'Skipping {c:3.0f}',end='                     \r')
+                if self.verbose: print(f'Skipping {c:3.0f}',end='                     \r')
                 continue
             else:
                 temp = ds['thetao'].values
@@ -120,12 +132,13 @@ class RunData(Constants):
 
             for m in range(len(time)):
                 if c<self.nmonths_saved:
+                    #Data for this month is already saved
                     c+=1
-                    print(f'Skipping {c:3.0f}',end='                     \r')
+                    if self.verbose: print(f'Skipping {c:3.0f}',end='                     \r')
                     continue
                 for b,bas in enumerate(volume.basin):
                     tbas[c,b] = np.nansum(temp[m,:,:,:]*volume.sel(basin=bas))/np.nansum(volume.sel(basin=bas))
-                print(f'{c:3.0f}',tbas[c,:],end='                                                \r')
+                if self.verbose: print(f'{c:3.0f}',tbas[c,:],end='                                                \r')
                 c += 1
 
         #Save data
@@ -133,16 +146,18 @@ class RunData(Constants):
         ds = xr.Dataset({'temp':temp2})
         ds.to_netcdf(self.savename_mon,mode='w')
         ds.close()
-        print('Updated monthly time series in',self.savename_mon,end='                     \n')
+        if self.verbose: print('Updated monthly time series in',self.savename_mon,end='                     \n')
         return
     
     def update_annual(self):
-    
+        #Update the annual time series of basin temperatures
+        
+        #Read basin volumes for spatial averaging
         ds = xr.open_dataset('../data/basinvolumes.nc')
         volume = ds['volume']
         ds.close()
 
-        #Calculate basin-average annual time series
+        #Allocate variables
         tbas = np.zeros((self.nyears,len(self.basin)))
         ttime = np.arange(self.nyears)
 
@@ -155,43 +170,50 @@ class RunData(Constants):
         except:
             pass
         
-        c = 0
+        #Get new mothly data
+        c = 0 #Year counter
         for f,fname in enumerate(self.fnames):
             ds = xr.open_dataset(fname)
             time = ds['time_centered'].values
-            ny = int(len(time)/12)
+            ny = int(len(time)/12) #Number of years in this file
             
             if c+ny<self.nyears_saved:
+                #All data from this file is already saved
                 ds.close()
                 c+=ny
-                print(f'Skipping {c:3.0f}',end='                     \r')
+                if self.verbose: print(f'Skipping {c:3.0f}',end='                     \r')
                 continue
             else:
                 temp = ds['thetao'].values
                 ds.close()
 
-            year0 = int(fname[-27:-23])
-
-            tb = np.zeros((len(self.basin)))
+            year0 = int(fname[-27:-23]) #First year in file from file name
             
             for y in np.arange(0,ny):
                 if c<self.nyears_saved:
+                    #Data for this year is already saved
                     c+=1
-                    print(f'Skipping {c:3.0f}',end='                     \r')
+                    if self.verbose: print(f'Skipping {c:3.0f}',end='                     \r')
                     continue                
 
+                #Allocate variable to accumulate monthly temperatures
+                tb = np.zeros((len(self.basin)))
+                    
                 for b,bas in enumerate(self.basin):
                     for m,mm in enumerate(self.months):
+                        #Get volume-weighted average temperature for this month
                         tbb = np.nansum(temp[m+12*y,:,:,:]*volume.sel(basin=bas))/np.nansum(volume.sel(basin=bas))
+                        #Accumulate monthly value, weighted by number of seconds per month
                         tb[b] += tbb*self.spm[m]
+                    #Divide accumulated values by number of seconds per month to get annual average
                     tbas[c,b] = tb[b]/sum(self.spm)
-                print(year0+y,f'{c:3.0f}',tbas[c,:],end='                                \r')
-                tb = np.zeros((len(self.basin)))
+                if self.verbose: print(year0+y,f'{c:3.0f}',tbas[c,:],end='                                \r')
                 c += 1
 
+        #Save data
         temp2 = xr.DataArray(tbas,dims=('time','basin'),coords={'time':ttime,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'temperature time series per basin'})
         ds = xr.Dataset({'temp':temp2})
         ds.to_netcdf(self.savename_ann,mode='w')
         ds.close()
-        print('Updated annual time series in',self.savename_ann) 
+        if self.verbose: print('Updated annual time series in',self.savename_ann) 
         return

@@ -4,15 +4,16 @@ import xarray as xr
 from constants import Constants
 
 class EnsembleMember(Constants):
-    """ Data and attributes for a single run 
+    """ 
+    Input: ad: AllData class
     
     """
-    def __init__(self,ds,ism,esm,ssp):
+    def __init__(self,ad,ism,esm,ssp,bmp):
         #Read constants
         Constants.__init__(self)
         
         #Read input
-        self.ds = ds.isel(exp=slice(0,5),basin=slice(0,5))
+        self.ds = ad.ds.isel(exp=slice(0,5),basin=slice(0,5))
         self.ds = self.ds.sel(ism=ism,esm=esm,ssp=ssp)
         
         self.basin = self.ds.basin
@@ -21,9 +22,9 @@ class EnsembleMember(Constants):
         self.esm = self.ds.esm
         self.ssp = self.ds.ssp
         
-        self.niter = 1
-        self.bmp = 'lin'
-        self.Tf = -1.7
+        self.bmp = bmp
+        
+        self.verbose = False
         
         return
 
@@ -31,6 +32,7 @@ class EnsembleMember(Constants):
         self.get_nofeedback()
         for n in range(1,self.niter+1):
             self.one_iter(n)
+        if self.verbose: print(f'Finished {self.niter} iteration')
         return
     
     def get_nofeedback(self):
@@ -96,3 +98,70 @@ class EnsembleMember(Constants):
                     TMP[t,b] += np.sum(CRF[::-1]*dFdt) #Sum over basins
         self.TMP[n,:,:] = self.TMP[n-1,:,:] + TMP
         return
+    
+    
+class FullEnsemble(Constants):
+    """ 
+    Input: ad: AllData class
+    
+    """
+    def __init__(self,ad):
+        #Read constants
+        Constants.__init__(self)
+        
+        #Read input
+        self.ad = ad
+        ds = ad.ds.isel(exp=slice(0,5),basin=slice(0,5))
+        
+        self.basin = ds.basin
+        self.exp = ds.exp
+        self.ism = ds.ism
+        self.esm = ds.esm
+        self.ssp = ds.ssp
+        self.time = ds.time
+        
+        self.savename = f'../data/ensemble{self.ad.option}_{self.ad.year0}.nc'
+        
+        return
+    
+    def gather(self,force_update=False):
+        if force_update:
+            print('Doing a forced update of ensemble calculation')
+            self.compute()
+        else:
+            try:
+                print('Reading old saved ensemble')
+                ds = xr.open_dataset(self.savename)
+                self.slr_nf = ds['slr_nf']
+                self.slr_wf = ds['slr_wf']
+                ds.close()
+            except:
+                print('New input parameters, calculating new ensemble')
+                self.compute()
+        return
+    
+    def compute(self):
+        c = 0
+        self.slr_nf = np.zeros((len(self.bmps),len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
+        self.slr_wf = np.zeros((len(self.bmps),len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
+        for b,bmp in enumerate(self.bmps):
+            for s,ssp in enumerate(self.ssp):
+                for e,esm in enumerate(self.esm):
+                    for i,ism in enumerate(self.ism):
+                        c+=1
+                        ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,bmp=bmp)
+                        ens.iterate()
+                        self.slr_nf[b,s,e,i,:] = np.sum(ens.SLR[0,:,:],axis=1)
+                        self.slr_wf[b,s,e,i,:] = np.sum(ens.SLR[-1,:,:],axis=1)
+                        print(f'Got bmp {b+1} of {len(self.bmps)} | ssp {s+1} of {len(self.ssp)} | esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)*len(self.bmps)):.0f}% ',end='           \r')
+        self.save()
+        return
+    
+    def save(self):  
+        self.slr_nf = xr.DataArray(self.slr_nf,dims=('bmp','ssp','esm','ism','time'),coords={'bmp':self.bmps,'ssp':self.ssp,'esm':self.esm,'ism':self.ism,'time':self.time},attrs={'unit':'m','long_name':'Cumulative sea level rise without feedback'})
+        self.slr_wf = xr.DataArray(self.slr_wf,dims=('bmp','ssp','esm','ism','time'),coords={'bmp':self.bmps,'ssp':self.ssp,'esm':self.esm,'ism':self.ism,'time':self.time},attrs={'unit':'m','long_name':'Cumulative sea level rise with feedback'})
+
+        self.ds = xr.Dataset({'slr_nf':self.slr_nf,'slr_wf':self.slr_wf})
+        self.ds.to_netcdf(self.savename,mode='w')
+        self.ds.close()
+        print('Saved',self.savename,'                                           ')
