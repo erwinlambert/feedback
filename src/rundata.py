@@ -27,6 +27,15 @@ class RunData(Constants):
         #Determine whether to print a lot of updates
         self.verbose=verbose
         
+        #Get some metadata
+        self.get_fnames()
+        self.get_nmonths()
+        self.get_nyears()
+        
+        self.jmax = 55 #Maximum latitude index for 2d variables
+        self.var2d = {}
+        self.dep2d = {}
+        
         return
     
     def checkfornewdata(self,option='all'):
@@ -40,7 +49,7 @@ class RunData(Constants):
             #Update annual basin temperatures
             self.get_nyears()
             if self.nyears_saved<self.nyears: #Check whether any new data is available
-                if self.verbose: print(f'Updating annual time series with {self.nyears-self.nyears_saved} years ...')
+                print(f'Updating annual time series with {self.nyears-self.nyears_saved} years ...')
                 self.update_annual()
             if self.verbose: print('Annual data complete')
         
@@ -48,7 +57,7 @@ class RunData(Constants):
             #Update monthly basin temperatures
             self.get_nmonths()    
             if self.nmonths_saved<self.nmonths: #Check whether any new data is available
-                if self.verbose: print(f'Updating monthly time series with {self.nmonths-self.nmonths_saved} months ...')
+                print(f'Updating monthly time series with {self.nmonths-self.nmonths_saved} months ...')
                 self.update_monthly()
             if self.verbose: print('Monthly data complete')
         if self.verbose: print('---------------------')
@@ -216,4 +225,30 @@ class RunData(Constants):
         ds.to_netcdf(self.savename_ann,mode='w')
         ds.close()
         if self.verbose: print('Updated annual time series in',self.savename_ann) 
+        return
+    
+    def get_var2d(self,vname,depth,maxmon=999999):
+        nmon = min(maxmon,self.nmonths)
+        #Allocate variable
+        ds = xr.open_dataset(self.fnames[0]).isel(y=slice(0,self.jmax))
+        olev = np.argmin((ds['olevel'].values-depth)**2)
+        self.lon = ds.nav_lon
+        self.lat = ds.nav_lat
+        self.dep2d[vname] = ds['olevel'][olev].values
+        self.var2d[vname] = np.zeros((nmon,self.lon.shape[0],self.lon.shape[1]))
+        ds.close()
+        print(f'Getting {nmon} months of {vname} at depth {self.dep2d[vname]:.0f}m')
+        c = -1
+        for fname in self.fnames:
+            ds = xr.open_dataset(fname).isel(y=slice(0,self.jmax))
+            for t,tt in enumerate(ds['time_counter'].values):
+                c+=1
+                if c>=nmon:
+                    break
+                self.var2d[vname][c,:,:] = ds[vname].isel(olevel=olev,time_counter=t)
+                print(f'Got {vname}: month {c+1} of {nmon}',end='       \r')
+            ds.close()
+            if c>=nmon:
+                break
+        print(f'\rGot {nmon} months of {vname} at depth {self.dep2d[vname]:.0f}m')
         return
