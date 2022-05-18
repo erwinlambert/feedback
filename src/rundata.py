@@ -96,11 +96,11 @@ class RunData(Constants):
     def get_fnames(self):
         #Get the filenames containing the raw data
         if self.run == 'ctrl':
-            self.fnames = sorted(glob.glob(f'../data/ecefiles/n011/n011*T.nc'))[38:-5]
+            self.fnames = sorted(glob.glob(f'../rawdata/ecefiles/n011/n011*T.nc'))[38:-5]
         elif self.run == 'spin':
-            self.fnames = sorted(glob.glob(f'../data/ecefiles/n011/n011*T.nc'))[:38]
+            self.fnames = sorted(glob.glob(f'../rawdata/ecefiles/n011/n011*T.nc'))[:38]
         else:
-            self.fnames = sorted(glob.glob(f'../data/ecefiles/{self.run}/{self.run}*T.nc'))
+            self.fnames = sorted(glob.glob(f'../rawdata/ecefiles/{self.run}/{self.run}*T.nc'))
         return 
 
     def update_monthly(self):

@@ -10,7 +10,7 @@ def save_basinvolumes():
     area = ds['O1t0.srf'].values;
     ds.close()
     
-    ds = xr.open_dataset('../data/ecefiles/n011/n011_1m_18500101_18501231_grid_T.nc')
+    ds = xr.open_dataset('../rawdata/ecefiles/n011/n011_1m_18500101_18501231_grid_T.nc')
     y = ds['y'].values
     x = ds['x'].values
     lat = ds['nav_lat'].values

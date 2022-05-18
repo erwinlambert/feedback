@@ -14,19 +14,15 @@ class Constants(object):
         self.K   = 1028*3947/(917*3.34e5) #Constant to convert gamma to basal melt sensitivity
         
         self.basin = ['East Ant.','Ross','Amundsen','Weddell','Peninsula','Pens. East','Pens. West']
-        self.exp = ['eais','ross','amun','wedd','pens','tot2','hal2','doub']
+        self.exp = ['eais','ross','amun','wedd','pens','tot2','hal2']
         self.ssp = ['126','245','585']
         
         self.bmps = ['lin','quad']
         
         #Basal melt parameterisation
-        self.gamma = {}
-        self.gamma['lin']  = np.array([1.7e-5 ,4.8e-6 ,3.8e-5 ,9.6e-6 ,2.4e-5])
-        self.gamma['quad'] = np.array([1.8e-4 ,4.5e-5 ,3.6e-4 ,9.0e-5 ,2.3e-4])
+        self.gamma0 = 2.5 #Initial value for both linear and quadratic params
         
-        self.bmpexp = {} #Exponent in basal melt equation
-        self.bmpexp['lin'] = 1
-        self.bmpexp['quad'] = 2
+        self.bmpexp = 2 #Quadratic, can be changed to 1 for linear param
         
         #Perturbation magnitude
         self.pert = 400 #Gt/yr
@@ -36,6 +32,9 @@ class Constants(object):
         
         self.Tf = -1.7
         
+        self.Trean = np.array([0.53,-0.18,1.37,-0.79,-0.24]) #Reanalysis values
+
+        self.SLRtarget = .0132 #meters over 40 year Rignot period | Antarctic: .132; Amundsen: .0096
         
         self.bcol = {}
         self.bcol['East Ant.'] = 'tab:blue'
@@ -55,12 +54,12 @@ class Constants(object):
 
         self.rcol = {}
         self.rcol['ctrl'] = '.5'
-        self.rcol['quar'] = self.scol['119']
-        self.rcol['half'] = self.scol['126']
-        self.rcol['hal2'] = self.scol['126']
-        self.rcol['totl'] = self.scol['245']
-        self.rcol['tot2'] = self.scol['245']
-        self.rcol['doub'] = self.scol['585']
+        self.rcol['quar'] = 'tab:cyan'
+        self.rcol['half'] = 'tab:olive'
+        self.rcol['hal2'] = 'tab:olive'
+        self.rcol['totl'] = 'tab:pink'
+        self.rcol['tot2'] = 'tab:pink'
+        self.rcol['doub'] = 'tab:brown'
         self.rcol['eais'] = self.bcol['East Ant.']
         self.rcol['ross'] = self.bcol['Ross']
         self.rcol['amun'] = self.bcol['Amundsen']
