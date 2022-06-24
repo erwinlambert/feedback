@@ -28,13 +28,13 @@ class Constants(object):
         self.pert = 400 #Gt/yr
         
         #Number of iterations
-        self.niter = 1
+        self.niter = 40
         
         self.Tf = -1.7
         
         self.Trean = np.array([0.53,-0.18,1.37,-0.79,-0.24]) #Reanalysis values
 
-        self.SLRtarget = .0132 #meters over 40 year Rignot period | Antarctic: .132; Amundsen: .0096
+        self.SLRtarget = .0132 #meters over 40 year Rignot period | Antarctic: .0132; Amundsen: .0096
         
         self.bcol = {}
         self.bcol['East Ant.'] = 'tab:blue'
