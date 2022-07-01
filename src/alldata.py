@@ -119,6 +119,7 @@ class AllData(Constants):
             for r,reg in enumerate(self.region):
                 with open(f'../data/Larmip/RFunctions_total/RF_{ii}_BM08_{reg}.dat') as f:
                     self.irf[:,i,r] = np.array([float(x) for x in f.readlines()])[:self.nyears]
+        self.irf = self.irf/8. #Divide by 8 m/yr basal melt perturbation
         return
 
     def get_srf(self):
