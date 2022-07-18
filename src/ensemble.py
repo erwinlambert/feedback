@@ -47,11 +47,11 @@ class EnsembleMember(Constants):
         self.cal = cal #'S' or 'I'
         self.nonlin = nonlin #'alpha' or 'cutoff'
         
-        #Allocate variables for nf (no feedback), wfnr (with feedback, no recal), wfwr (with feedback, with recal)
-        self.TMP = np.zeros((3,len(self.ds.time),len(self.ds.basin)))
-        self.IML = np.zeros((3,len(self.ds.time),len(self.ds.basin)))
-        self.SLR = np.zeros((3,len(self.ds.time),len(self.ds.basin)))
-        self.MLT = np.zeros((3,len(self.ds.time),len(self.ds.basin)))
+        #Allocate variables for nf (no feedback), wf (with feedback)
+        self.TMP = np.zeros((2,len(self.ds.time),len(self.ds.basin)))
+        self.IML = np.zeros((2,len(self.ds.time),len(self.ds.basin)))
+        self.SLR = np.zeros((2,len(self.ds.time),len(self.ds.basin)))
+        self.MLT = np.zeros((2,len(self.ds.time),len(self.ds.basin)))
                 
         self.verbose = False
         
@@ -91,14 +91,8 @@ class EnsembleMember(Constants):
         self.get_nofeedback()
         if self.verbose:
             print('no feedback',np.array([self.gamma[0],np.sum(self.IML[0,:,:]),100*np.sum(self.SLR[0,-1,:])]))
-        
-        #With feedback, no recalibration
-        self.TMP[1,:,:],self.IML[1,:,:],self.SLR[1,:,:],err = self.get_withfeedback(self.gamma[0],self.ds.temp.values)
-        self.MLT[1,:,:] = self.basalmelt(self.TMP[1,:,:],self.gamma[0])
-        if self.verbose:
-            print('wf norecal',np.array([self.gamma[0],np.sum(self.IML[1,:,:]),100*np.sum(self.SLR[1,-1,:])]))
-            
-        #With feedback, with recalibration
+
+        #With feedback
         
         if recal:
             if calibrate:
@@ -113,10 +107,10 @@ class EnsembleMember(Constants):
                     print('no calibration possible with feedback, setting all nan')
                 return
 
-            self.TMP[2,:,:],self.IML[2,:,:],self.SLR[2,:,:],err = self.get_withfeedback(self.gamma[1],self.ds.temp.values)
-            self.MLT[2,:,:] = self.basalmelt(self.TMP[2,:,:],self.gamma[1])
-            if self.verbose:
-                print('wf with recal',np.array([self.gamma[1],np.sum(self.IML[2,:,:]),100*np.sum(self.SLR[2,-1,:])]))
+        self.TMP[1,:,:],self.IML[1,:,:],self.SLR[1,:,:],err = self.get_withfeedback(self.gamma[1],self.ds.temp.values)
+        self.MLT[1,:,:] = self.basalmelt(self.TMP[1,:,:],self.gamma[1])
+        if self.verbose:
+            print('wf with recal',np.array([self.gamma[1],np.sum(self.IML[1,:,:]),100*np.sum(self.SLR[1,-1,:])]))
 
         return
     
@@ -389,7 +383,7 @@ class FullEnsemble(Constants):
         self.ad = ad
         ds = ad.ds.isel(exp=slice(0,5),basin=slice(0,5))
         
-        self.year0 = 1951
+        self.year0 = ad.year0
         ds = ds.sel(time=slice(self.year0,self.year0+150-1))
         
         self.basin = ds.basin
@@ -401,7 +395,7 @@ class FullEnsemble(Constants):
         
         self.cal = 'S'
         
-        self.nonlin = 'alpha'
+        self.nonlin = 'cutoff'
         
         return
     
@@ -424,7 +418,7 @@ class FullEnsemble(Constants):
     
     def compute(self):
         c = 0 #Counter to show progress
-        self.slr = np.zeros((3,len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
+        self.slr = np.zeros((2,len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
         self.gamma = np.zeros((2,len(self.esm),len(self.ism)))
         
         for e,esm in enumerate(self.esm.values):
@@ -443,16 +437,15 @@ class FullEnsemble(Constants):
                     ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,cal=self.cal,nonlin=self.nonlin)
                     ens.compute(gamma=self.gamma[:,e,i])
                     self.slr[:,s,e,i,:] = np.sum(ens.SLR[:,:,:],axis=2)
-                print(esm,ism,self.gamma[:,e,i],self.slr[1,:,e,i,-1]/self.slr[0,:,e,i,-1],self.slr[2,:,e,i,-1]/self.slr[0,:,e,i,-1],end='                           \n')
+                print(esm,ism,self.gamma[:,e,i],self.slr[1,:,e,i,-1]/self.slr[0,:,e,i,-1],end='                           \n')
                 print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
         self.save()
         return
     
     def save(self):  
-        option = ['nf','wfnr','wfwr']
-        opt2 = ['nf','wf']
+        option = ['nf','wf']
         self.slr = xr.DataArray(self.slr,dims=('option','ssp','esm','ism','time'),coords={'option':option,'ssp':self.ssp,'esm':self.esm,'ism':self.ism,'time':self.time},attrs={'unit':'m','long_name':'Cumulative sea level rise'})
-        self.gamma = xr.DataArray(self.gamma,dims=('opt2','esm','ism'),coords={'opt2':opt2,'esm':self.esm,'ism':self.ism},attrs={'unit':'m/yr/K^2','long_name':'Basal melt parameter'})
+        self.gamma = xr.DataArray(self.gamma,dims=('option','esm','ism'),coords={'option':option,'esm':self.esm,'ism':self.ism},attrs={'unit':'m/yr/K^2','long_name':'Basal melt parameter'})
         
         self.ds = xr.Dataset({'slr':self.slr,'gamma':self.gamma})
         self.ds.to_netcdf(self.savename,mode='w')
@@ -487,10 +480,7 @@ class FullEnsemble2(Constants):
         self.ssp = ds.ssp
         self.time = ds.time
         
-        self.N = 1
-        
-        self.loc = 2.6
-        self.scale = .6
+        self.gamma = 2.57 #Fixed value
         
         self.nonlin = 'cutoff'
         
@@ -498,7 +488,7 @@ class FullEnsemble2(Constants):
     
     def gather(self,force_update=False):
         
-        self.savename = f'../data/ensemble2_{self.nonlin}_{self.year0}.nc'
+        self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}.nc'
         
         if force_update:
             print('Doing a forced update of ensemble calculation: ',self.savename)
@@ -508,7 +498,6 @@ class FullEnsemble2(Constants):
                 ds = xr.open_dataset(self.savename)
                 print('Reading old saved ensemble ',self.savename)
                 self.slr = ds['slr']
-                self.gamma = ds['gamma']
                 ds.close()
             except:
                 print('New input parameters, calculating new ensemble: ',self.savename)
@@ -517,35 +506,28 @@ class FullEnsemble2(Constants):
     
     def compute(self):
         c = 0 #Counter to show progress
-        self.slr = np.zeros((2,self.N,len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
-        
-        self.gamma = np.random.normal(loc=self.loc, scale=self.scale, size=(self.N,len(self.esm),len(self.ism)))
-        
+        self.slr = np.zeros((2,len(self.ssp),len(self.esm),len(self.ism),len(self.time)))
+                
         for e,esm in enumerate(self.esm.values):
             for i,ism in enumerate(self.ism.values):
-                #Sample gamma
-                for n in range(self.N):
-                    for s,ssp in enumerate(self.ssp.values):
-                        #Print progress
-                        c+=1 
-                        print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | n = {n} | Progress: {100*c/(self.N*len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
+                for s,ssp in enumerate(self.ssp.values):
+                    #Print progress
+                    c+=1 
+                    print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
 
-                        #Calculation
-                        ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,nonlin=self.nonlin)
-                        ens.compute(gamma=np.array([self.gamma[n,e,i],self.gamma[n,e,i]]),recal=False)
-                        self.slr[:,n,s,e,i,:] = np.sum(ens.SLR[:2,:,:],axis=2)
-                    print(esm,ism,f'{self.gamma[n,e,i]:.2f}',self.slr[1,n,:,e,i,-1]/self.slr[0,n,:,e,i,-1],end='                                                 \n')
-                    print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | n = {n} | Progress: {100*c/(self.N*len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
+                    #Calculation
+                    ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,nonlin=self.nonlin)
+                    ens.compute(gamma=np.array([self.gamma,self.gamma]),recal=False)
+                    self.slr[:,s,e,i,:] = np.sum(ens.SLR[:2,:,:],axis=2)
+                print(esm,ism,self.slr[1,:,e,i,-1]/self.slr[0,:,e,i,-1],end='                                          \n')
+                print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
         self.save()
         return
     
     def save(self):  
         opt2 = ['nf','wf']
-        n = np.arange(0,self.N)
-        self.slr = xr.DataArray(self.slr,dims=('opt2','sample','ssp','esm','ism','time'),coords={'opt2':opt2,'sample':n,'ssp':self.ssp,'esm':self.esm,'ism':self.ism,'time':self.time},attrs={'unit':'m','long_name':'Cumulative sea level rise'})
-        self.gamma = xr.DataArray(self.gamma,dims=('sample','esm','ism'),coords={'sample':n,'esm':self.esm,'ism':self.ism},attrs={'unit':'m/yr/K^2','long_name':'Basal melt parameter'})
-        
-        self.ds = xr.Dataset({'slr':self.slr,'gamma':self.gamma})
+        self.slr = xr.DataArray(self.slr,dims=('opt2','ssp','esm','ism','time'),coords={'opt2':opt2,'ssp':self.ssp,'esm':self.esm,'ism':self.ism,'time':self.time},attrs={'unit':'m','long_name':'Cumulative sea level rise'})
+        self.ds = xr.Dataset({'slr':self.slr})
         self.ds.to_netcdf(self.savename,mode='w')
         self.ds.close()
         print('Saved',self.savename,'                                           ')
