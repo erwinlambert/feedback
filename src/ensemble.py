@@ -12,7 +12,7 @@ class EnsembleMember(Constants):
     Input: ad: AllData class
     
     """
-    def __init__(self,ad,ism,esm,ssp,year0,cal='S',nonlin='cutoff'):
+    def __init__(self,ad,ism,esm,ssp,year0,cal='S',nonlin='cutoff',lump=False):
         #Read constants
         Constants.__init__(self)
         
@@ -46,6 +46,7 @@ class EnsembleMember(Constants):
         
         self.cal = cal #'S' or 'I'
         self.nonlin = nonlin #'alpha' or 'cutoff'
+        self.lump = lump #Bool
         
         #Allocate variables for nf (no feedback), wf (with feedback)
         self.TMP = np.zeros((2,len(self.ds.time),len(self.ds.basin)))
@@ -343,31 +344,55 @@ class EnsembleMember(Constants):
         
         Fmax = [840,520,560,740,770]
         
-        for t,tt in enumerate(self.ds.rftime):
-            if t<1: continue
-            for e,ex in enumerate(self.ds.exp):
-                #Index e now refers to source region of ice mass loss
+        if self.lump:
+            #Compute based on total ice mass loss from all source regions
+            for t,tt in enumerate(self.ds.rftime):
+                if t<1: continue
+                #IML in Gt/yr, summed over all source regions
+                F = np.sum(IML[:t-1,:],axis=1)
+
                 for b,bas in enumerate(self.ds.basin):
-                    #IML in Gt/yr
-                    F = IML[:t-1,e]
-                    
                     #Scale for non-linear RF
                     F = np.sign(F)*np.abs(F)**alpha[b]
-                    
+
                     if self.nonlin == 'cutoff':
                         F = np.maximum(np.minimum(F,Fmax[b]),-Fmax[b])
-                    
+
                     #Compute ORF is time derivative of tanom / fanom in K/yr / (Gt/yr)^a
                     if self.usefanom: 
                         #Use exponential fit through tanom
-                        CRF = (self.ds.fanom[1:t,e,b].values-self.ds.fanom[:t-1,e,b].values)/(self.pert**alpha[b])
+                        CRF = (np.mean(self.ds.fanom[1:t,:5,b].values,axis=1)-np.mean(self.ds.fanom[:t-1,:5,b].values,axis=1))/(self.pert**alpha[b])
                     else: 
                         #Use raw tanom
-                        CRF = (self.ds.tanom[1:t,e,b].values-self.ds.tanom[:t-1,e,b].values)/(self.pert**alpha[b])
-                            
-                    dTMP[t,b] += np.sum(CRF[::-1]*F) #Sum over exp (= source region of ice mass loss)
-            #print(t,TMP[t,:])
-        #self.TMP[n,:,:] = self.TMP[0,:,:] + TMP#Add anomaly to temperature without feedback
+                        CRF = (np.mean(self.ds.tanom[1:t,:5,b].values,axis=1)-np.mean(self.ds.tanom[:t-1,:5,b].values,axis=1))/(self.pert**alpha[b])
+                    dTMP[t,b] = np.sum(CRF[::-1]*F)
+        else:
+            #Compute based on individual ORFs for each source region
+            for t,tt in enumerate(self.ds.rftime):
+                if t<1: continue
+                for e,ex in enumerate(self.ds.exp):
+                    #Index e now refers to source region of ice mass loss
+                    for b,bas in enumerate(self.ds.basin):
+                        #IML in Gt/yr
+                        F = IML[:t-1,e]
+                        
+                        #Scale for non-linear RF
+                        F = np.sign(F)*np.abs(F)**alpha[b]
+                        
+                        if self.nonlin == 'cutoff':
+                            F = np.maximum(np.minimum(F,Fmax[b]),-Fmax[b])
+                        
+                        #Compute ORF is time derivative of tanom / fanom in K/yr / (Gt/yr)^a
+                        if self.usefanom: 
+                            #Use exponential fit through tanom
+                            CRF = (self.ds.fanom[1:t,e,b].values-self.ds.fanom[:t-1,e,b].values)/(self.pert**alpha[b])
+                        else: 
+                            #Use raw tanom
+                            CRF = (self.ds.tanom[1:t,e,b].values-self.ds.tanom[:t-1,e,b].values)/(self.pert**alpha[b])
+                                
+                        dTMP[t,b] += np.sum(CRF[::-1]*F) #Sum over exp (= source region of ice mass loss)
+                #print(t,TMP[t,:])
+            #self.TMP[n,:,:] = self.TMP[0,:,:] + TMP#Add anomaly to temperature without feedback
         return dTMP
     
 class FullEnsemble(Constants):
@@ -392,15 +417,19 @@ class FullEnsemble(Constants):
         self.esm = ds.esm
         self.ssp = ds.ssp
         self.time = ds.time
-        
+
+        #Default settings for EnsembleMember. Can be overwritten before running .compute()
         self.cal = 'S'
-        
         self.nonlin = 'cutoff'
-        
+        self.lump = False
+
         return
     
     def gather(self,force_update=False):
-        self.savename = f'../data/ensemble_cal{self.cal}_{self.nonlin}_{self.year0}.nc'
+        if self.lump:
+            self.savename = f'../data/ensemble_cal{self.cal}_{self.nonlin}_{self.year0}_lump.nc'
+        else:
+            self.savename = f'../data/ensemble_cal{self.cal}_{self.nonlin}_{self.year0}.nc'
         if force_update:
             print('Doing a forced update of ensemble calculation: ',self.savename)
             self.compute()
@@ -424,7 +453,7 @@ class FullEnsemble(Constants):
         for e,esm in enumerate(self.esm.values):
             for i,ism in enumerate(self.ism.values):
                 #Calibrate to get gamma
-                cens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp='245',year0=1871,cal=self.cal,nonlin=self.nonlin)
+                cens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp='245',year0=1871,cal=self.cal,nonlin=self.nonlin,lump=self.lump)
                 cens.calibrate_nf()
                 cens.calibrate_wf()
                 self.gamma[:,e,i] = cens.gamma
@@ -434,7 +463,7 @@ class FullEnsemble(Constants):
                     print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
                     
                     #Calculation
-                    ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,cal=self.cal,nonlin=self.nonlin)
+                    ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,cal=self.cal,nonlin=self.nonlin,lump=self.lump)
                     ens.compute(gamma=self.gamma[:,e,i])
                     self.slr[:,s,e,i,:] = np.sum(ens.SLR[:,:,:],axis=2)
                 print(esm,ism,self.gamma[:,e,i],self.slr[1,:,e,i,-1]/self.slr[0,:,e,i,-1],end='                           \n')
@@ -480,15 +509,18 @@ class FullEnsemble2(Constants):
         self.ssp = ds.ssp
         self.time = ds.time
         
+        #Default settings for EnsembleMember. Can be overwritten before running .compute()
         self.gamma = 2.57 #Fixed value
-        
         self.nonlin = 'cutoff'
-        
+        self.lump = False
+
         return
     
     def gather(self,force_update=False):
-        
-        self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}.nc'
+        if self.lump:
+            self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}_lump.nc'
+        else:
+            self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}.nc'
         
         if force_update:
             print('Doing a forced update of ensemble calculation: ',self.savename)
@@ -516,7 +548,7 @@ class FullEnsemble2(Constants):
                     print(f'Computing esm {e+1} of {len(self.esm)} | ism {i+1} of {len(self.ism)} | ssp {s+1} of {len(self.ssp)} | Progress: {100*c/(len(self.ssp)*len(self.esm)*len(self.ism)):.0f}% ',end='           \r')
 
                     #Calculation
-                    ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,nonlin=self.nonlin)
+                    ens = EnsembleMember(self.ad,ism=ism,esm=esm,ssp=ssp,year0=self.year0,nonlin=self.nonlin,lump=self.lump)
                     ens.compute(gamma=np.array([self.gamma,self.gamma]),recal=False)
                     self.slr[:,s,e,i,:] = np.sum(ens.SLR[:2,:,:],axis=2)
                 print(esm,ism,self.slr[1,:,e,i,-1]/self.slr[0,:,e,i,-1],end='                                          \n')
