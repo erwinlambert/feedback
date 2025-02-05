@@ -43,15 +43,17 @@ class AllData(Constants):
         self.get_external()
         self.get_tanom()
         self.get_fanom()
+        self.get_lanom()
         
         irf2  = xr.DataArray(self.irf,dims=('rftime','ism','basin'),coords={'rftime':self.rftime,'ism':self.ism,'basin':self.basin},attrs={'unit':'Gt/yr per m/yr','long_name':'ice mass loss response function to increased basal melt'})
         srf2  = xr.DataArray(self.srf,dims=('rftime','ism','basin'),coords={'rftime':self.rftime,'ism':self.ism,'basin':self.basin},attrs={'unit':'m/yr per m/yr','long_name':'sea level response function to increased basal melt'})
         temp2 = xr.DataArray(self.temp,dims=('time','esm','ssp','basin'),coords={'time':self.time,'esm':self.esm,'ssp':self.ssp,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'temperature anomaly from pre-industrial control'})
         tanom2  = xr.DataArray(self.tanom,dims=('rftime','exp','basin'),coords={'rftime':self.rftime,'exp':self.exp,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'ocean response function to increased mass loss'})
         fanom2  = xr.DataArray(self.fanom,dims=('rftime','exp','basin'),coords={'rftime':self.rftime,'exp':self.exp,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'fitted ocean response function to increased mass loss'})
+        lanom2 = xr.DataArray(self.lanom,dims=('rftime','basin'),coords={'rftime':self.rftime,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'fitted ocean response function to increased mass loss, averaged over 5 source regions'})
         tref2  = xr.DataArray(self.tref,dims=('esm','basin'),coords={'esm':self.esm,'basin':self.basin},attrs={'unit':'degrees Celcius','long_name':'historical reference temperature per ESM per basin'})
         
-        self.ds = xr.Dataset({'irf':irf2,'srf':srf2,'temp':temp2,'tanom':tanom2,'fanom':fanom2,'tref':tref2})
+        self.ds = xr.Dataset({'irf':irf2,'srf':srf2,'temp':temp2,'tanom':tanom2,'fanom':fanom2,'lanom':lanom2,'tref':tref2})
         
         if self.verbose:
             print('-----------------------------------------------')
@@ -106,6 +108,23 @@ class AllData(Constants):
                 print(f'Created exponential fit through first {yavail} years of tanom for run {ee}')
         return
     
+    def get_lanom(self):
+        #Exponential fit through exp-average of tanom
+        self.lanom  = np.zeros((len(self.rftime),len(self.basin)))
+
+        f = lambda t, *p: p[0] * (1-np.exp(-t/p[1]))
+        
+        ds = xr.open_dataset(f'../data/temperature_ann_{self.exp[0]}.nc')
+        yavail = len(ds.time)
+        ds.close()
+        for b,bas in enumerate(self.basin):
+            popt, pcov = curve_fit(f,self.rftime[:yavail],np.mean(self.tanom[:yavail,:5,b],axis=1),[1,50])
+            self.lanom[:,b] = popt[0]*(1-np.exp(-self.rftime/popt[1]))
+        if self.verbose:
+            print(f'Created exponential fit through average of five experiments')
+        return        
+
+
     def update_runs(self,option='ann'):
         for ee in self.exp:
             rd = RunData(ee,verbose=self.verbose)

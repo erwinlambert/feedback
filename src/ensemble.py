@@ -16,7 +16,7 @@ class EnsembleMember(Constants):
         #Read constants
         Constants.__init__(self)
         
-        self.usefanom = True
+        self.usefanom = ad.usefanom
         self.year0 = year0
         assert self.year0 < 1979
         assert self.year0 > 2017-ad.nyears
@@ -361,7 +361,7 @@ class EnsembleMember(Constants):
                     #Compute ORF is time derivative of tanom / fanom in K/yr / (Gt/yr)^a
                     if self.usefanom: 
                         #Use exponential fit through tanom
-                        CRF = (np.mean(self.ds.fanom[1:t,:5,b].values,axis=1)-np.mean(self.ds.fanom[:t-1,:5,b].values,axis=1))/(self.pert**alpha[b])
+                        CRF = (self.ds.lanom[1:t,b].values-self.ds.lanom[:t-1,b].values)/(self.pert**alpha[b])
                     else: 
                         #Use raw tanom
                         CRF = (np.mean(self.ds.tanom[1:t,:5,b].values,axis=1)-np.mean(self.ds.tanom[:t-1,:5,b].values,axis=1))/(self.pert**alpha[b])
@@ -426,10 +426,17 @@ class FullEnsemble(Constants):
         return
     
     def gather(self,force_update=False):
-        if self.lump:
-            self.savename = f'../data/ensemble_cal{self.cal}_{self.nonlin}_{self.year0}_lump.nc'
+        if self.ad.usefanom:
+            if self.lump:
+                self.savename = f'../data/ensemble_cal{self.cal}_fanom_{self.nonlin}_{self.year0}_lump.nc'
+            else:
+                self.savename = f'../data/ensemble_cal{self.cal}_fanom_{self.nonlin}_{self.year0}.nc'
         else:
-            self.savename = f'../data/ensemble_cal{self.cal}_{self.nonlin}_{self.year0}.nc'
+            if self.lump:
+                self.savename = f'../data/ensemble_cal{self.cal}_tanom_{self.nonlin}_{self.year0}_lump.nc'
+            else:
+                self.savename = f'../data/ensemble_cal{self.cal}_tanom_{self.nonlin}_{self.year0}.nc'
+
         if force_update:
             print('Doing a forced update of ensemble calculation: ',self.savename)
             self.compute()
@@ -517,11 +524,17 @@ class FullEnsemble2(Constants):
         return
     
     def gather(self,force_update=False):
-        if self.lump:
-            self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}_lump.nc'
+        if self.ad.usefanom:
+            if self.lump:
+                self.savename = f'../data/ensemble_fixed_fanom_{self.nonlin}_{self.year0}_lump.nc'
+            else:
+                self.savename = f'../data/ensemble_fixed_fanom_{self.nonlin}_{self.year0}.nc'
         else:
-            self.savename = f'../data/ensemble_fixed_{self.nonlin}_{self.year0}.nc'
-        
+            if self.lump:
+                self.savename = f'../data/ensemble_fixed_tanom_{self.nonlin}_{self.year0}_lump.nc'
+            else:
+                self.savename = f'../data/ensemble_fixed_tanom_{self.nonlin}_{self.year0}.nc'            
+
         if force_update:
             print('Doing a forced update of ensemble calculation: ',self.savename)
             self.compute()
