@@ -136,6 +136,7 @@ data/basinvolumes.nc
 data/basinvolumes_shelfdepth1000.nc
 data/Larmip/
 data/eveline/
+data/shelfdepth/
 videos/
 .DS_Store
 draftfigs/Levermann_methods.jpg
