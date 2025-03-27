@@ -133,6 +133,7 @@ data/ecefiles/
 data/Rignot/
 data/basinmask.nc
 data/basinvolumes.nc
+data/basinvolumes_shelfdepth1000.nc
 data/Larmip/
 data/eveline/
 videos/
